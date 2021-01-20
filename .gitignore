@@ -1,0 +1,7 @@
+db/
+sqlite/
+common/
+*.o
+*.swp
+*.tmp
+cw2_server

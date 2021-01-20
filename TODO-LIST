@@ -1,0 +1,15 @@
+/*
+* file: TODO-LIST
+* date: 2010/3/3
+* remarks: todo-list for cw2_server
+*/
+
+2010/3/3
+・CSVの書き出し位置を FHS(Filesystem Hierarchy Standard) に準拠させるために、次の位置に置きたい
+	/var/local/cwatcher
+  ここに cwcsv/YYYY/MM/DD/1.csv, latest という形で書き出す
+・DBのレコード件数の抑止、「日数（14日間）」に加え、「レコード数」での抑止のコードも追加する
+  ->Win の [C:\kitWorks\wcopy2\cw2_server\win32\cw2_server.sln] 内で実装、検証済み
+  <-1.6 系列へマージすること
+・ADの名前解決のためのスレッド、NameLookupThread、が動いている。AD導入まではコメントアウトすること
+
