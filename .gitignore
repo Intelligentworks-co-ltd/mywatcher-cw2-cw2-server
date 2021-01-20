@@ -4,4 +4,7 @@ common/
 *.o
 *.swp
 *.tmp
+*.euc
+*.utf8
+*.sql
 cw2_server

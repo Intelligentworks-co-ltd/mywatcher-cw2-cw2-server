@@ -2274,6 +2274,7 @@ enum NTLM_MESSAGE_TYPE {
 							tree.name = it->path;
 							session->smb2_session.tree_map[tree_id] = tree;
 #if 0
+// for DEBUG
 log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 	, sid->client.addr.tostring().c_str()
 	, sid->server.addr.tostring().c_str()
@@ -2459,69 +2460,74 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 				}
 				break;
 			case SMB2_OP_NOTIFY:
-                                // if (temp) {
-                                if (true) {
-					unsigned char const *ptr;
-					unsigned char const *end;
-					unsigned char const *smb;
-					unsigned char const *smbdata;
-					smb2_peek_stream(stream, &ptr, &end, &smb, &smbdata);
-					if (smb + 0x30 > end || smbdata + 8 > end) {
-						return 0;
-					}
-
-                                        std::uint32_t ntstatus;
-                                        ntstatus = LE4(smb + 8);
-                                        if (NTSTATUS_IS_SUCCESS(ntstatus)) {
-                                        } else {
-						// other status codes
-						// STATUS_PENDING: 0x103
-						return 0;
-					}
-
-					std::uint16_t blob_offset; // SMB2ヘッダ先頭からのオフセット
-					std::uint16_t blob_length;
-
-					blob_offset = LE2(smbdata + 2);
-					blob_length = LE2(smbdata + 4);
-					log_printf(0, "[SMB2] SMB2_OP_NOTIFY off: %d, len: %d",
-					blob_offset, blob_length);
-
-					// 古いファイル名のnotify info構造から、
-					// 新しいファイル名のnotify info構造へのオフセット
-					std::uint32_t notify_info_offset;
-					notify_info_offset = LE4(smb + blob_offset);
-
-					if (notify_info_offset == 0) {
-						// 新しい名前へのオフセットがないということは、
-						// 新しいファイル名がないということで、
-						// リネーム以外の何か
-						return 0;
-					}
-
-					const unsigned char* p = smb + blob_offset + 12;
-					std::uint32_t old_name_len = LE4(smb + blob_offset + 8);
-					ustring old_name = smb_get_string(p, p + old_name_len, 0x8000);
-
-					log_printf(0, "[SMB2] SMB2_OP_NOTIFY old name: %s",
-					utf8_ustring_to_string(old_name).c_str());
-
-					std::uint32_t new_name_len = LE4(smb + blob_offset + 8);
-
-
-
-					//log_printf(0, "[SMB2] SMB2_OP_NOTIFY NT failure  oldoff[%d]newoff[%d]!!!!!",
-					//newname_info_offset, LE4(smb + blob_offset + newname_info_offset));
-
-                                        /*
-					smb_file_state_t *filestate = session->smb2_session.find_file_state_map(temp->fid);
-					if (filestate) {
-						unsigned long len = LE4(smbdata + 4);
-						filestate->written += len;
-					}
-					temp->clear();
-                                        */
+				unsigned char const *ptr;
+				unsigned char const *end;
+				unsigned char const *smb;
+				unsigned char const *smbdata;
+				smb2_peek_stream(stream, &ptr, &end, &smb, &smbdata);
+				if (smb + 0x30 > end || smbdata + 8 > end) {
+					return 0;
 				}
+
+				std::uint32_t ntstatus;
+				ntstatus = LE4(smb + 8);
+				if (NTSTATUS_IS_SUCCESS(ntstatus)) {
+				} else {
+					// other status codes
+					// STATUS_PENDING: 0x103
+					return 0;
+				}
+
+				std::uint16_t blob_offset; // SMB2ヘッダ先頭からのオフセット
+				std::uint16_t blob_length;
+
+				blob_offset = LE2(smbdata + 2);
+				blob_length = LE2(smbdata + 4);
+
+				// 古いファイル名のnotify info構造から、
+				// 新しいファイル名のnotify info構造へのオフセット
+				std::uint32_t notify_info_offset;
+				notify_info_offset = LE4(smb + blob_offset);
+
+				if (notify_info_offset == 0) {
+					// 新しい名前へのオフセットがないということは、
+					// 新しいファイル名がないということで、
+					// リネーム以外の何か
+					return 0;
+				}
+
+				const unsigned char* p = smb + blob_offset + 12;
+				std::uint32_t old_name_len = LE4(smb + blob_offset + 8);
+				ustring old_name = smb_get_string(p, p + old_name_len, 0x8000);
+
+				log_printf(0, "[SMB2] SMB2_OP_NOTIFY old name: %s",
+				utf8_ustring_to_string(old_name).c_str());
+
+				p = smb + blob_offset + notify_info_offset + 12;
+				std::uint32_t new_name_len = LE4(smb + blob_offset + 12 + 8);
+				ustring new_name = smb_get_string(p, p + new_name_len, 0x8000);
+
+				log_printf(0, "[SMB2] SMB2_OP_NOTIFY new name: %s",
+				utf8_ustring_to_string(new_name).c_str());
+
+				AutoLock lock(get_processor()->mutex());
+				{
+					file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);
+					ei->user_name = smb2_get_user_name(session, request_id.sid);
+					ei->text1 = old_name;
+					ei->text2 = new_name;
+					get_processor()->on_rename(ei);
+				}
+				temp->clear();
+
+				/*
+				smb_file_state_t *filestate = session->smb2_session.find_file_state_map(temp->fid);
+				if (filestate) {
+					unsigned long len = LE4(smbdata + 4);
+					filestate->written += len;
+				}
+				temp->clear();
+				*/
 				break;
 			}
 		}
@@ -2530,5 +2536,3 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 	}
 
 } // namespace ContentsWatcher
-
-
