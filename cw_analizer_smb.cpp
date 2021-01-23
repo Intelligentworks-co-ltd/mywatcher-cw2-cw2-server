@@ -2518,7 +2518,10 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 					ei->text2 = new_name;
 					get_processor()->on_rename(ei);
 				}
-				temp->clear();
+
+				if (temp) {
+					temp->clear();
+				}
 
 				/*
 				smb_file_state_t *filestate = session->smb2_session.find_file_state_map(temp->fid);
