@@ -1,4 +1,3 @@
-
 #ifndef __CIFS_H
 #define __CIFS_H
 
@@ -52,4 +51,3 @@ namespace cifs {
 }
 
 #endif
-

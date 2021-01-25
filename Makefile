@@ -2,9 +2,8 @@ TARGET = cw2_server
 
 CC = gcc
 CXX = g++
-CFLAGS = -std=c99 -ggdb -O2 -D`uname -s`
-#CXXFLAGS = -std=c++98 -ggdb -O2 -I /usr/include/mariadb -D`uname -s`
-CXXFLAGS = -std=c++17 -ggdb -O0 -I /usr/include/mariadb -D`uname -s`
+CFLAGS =  -std=c99 -ggdb -O2 -D`uname -s`
+CXXFLAGS =  -std=c++98 -ggdb -O0 -I /usr/include/mariadb -D`uname -s`
 
 all: $(TARGET)
 

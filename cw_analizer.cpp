@@ -469,13 +469,11 @@ dispatch:;
 				session_data_t *s = it->second.get_session_data();
 				stream->buffer->clear();
 				stream->sequence_is_valid = false;
-				/* for DEBUG
 				log_printf(packet->microsecond(), "[TCP] C=%s S=%s sequence number incorrect (#%u)"
 					, it->first.client.addr.tostring().c_str()
 					, it->first.server.addr.tostring().c_str()
 					, _packet_number
 					);
-				*/
 			} else {
 				stream->sequence += datalen;
 			}
@@ -541,8 +539,7 @@ dispatch:;
 			// test (ethernet header length + (VLAN-Tag) + ip packet length)
 			if (packet->datalen() < (size_t)(offset2IPHeader + packetlen)) {
 				if (!get_option()->ignore_defective_packet) {
-					// for DEBUG
-					// log_printf(packet->microsecond(), "[IP] defective packet (#%u)", _packet_number);
+					log_printf(packet->microsecond(), "[IP] defective packet (#%u)", _packet_number);
 					return; // invalid packet
 				}
 			}

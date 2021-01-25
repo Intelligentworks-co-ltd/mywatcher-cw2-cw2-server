@@ -1,6 +1,6 @@
+
 // PacketAnalyzerThreadのSMB解析処理
 
-#include <cstdint>
 #include "cw_analizer.h"
 #include "common/text.h"
 #include "common/combinepath.h"
@@ -12,7 +12,7 @@ int gnKRB5_Seq_Number = 0;		// global seq number for KRB5
 
 static inline ustring sjis_string_to_ustring(char const *ptr, size_t len)
 {
-	return soramimi::jcode::convert(soramimi::jcode::SJIS, ptr, len);
+    return soramimi::jcode::convert(soramimi::jcode::SJIS, ptr, len);
 }
 
 
@@ -606,7 +606,7 @@ namespace ContentsWatcher {
 		return -1;
 	}
 
-	static bool NTSTATUS_IS_SUCCESS(std::uint32_t s)
+	static bool NTSTATUS_IS_SUCCESS(unsigned long s)
 	{
 		return s == 0;
 	}
@@ -906,7 +906,7 @@ if (_packet_number == 9) {
 
 		unsigned short netbioslength;
 		unsigned char smbcommand;
-		std::uint32_t ntstatus;
+		unsigned long ntstatus;
 		unsigned char flags1;
 		unsigned short flags2;
 		smb_tid_t tree_id;
@@ -1908,7 +1908,7 @@ enum NTLM_MESSAGE_TYPE {
 
 		unsigned short smb_header_length;
 		unsigned short smbcommand;
-		std::uint32_t ntstatus;
+		unsigned long ntstatus;
 		smb2_request_id_t request_id;
 		smb2_tid_t tree_id;
 		{
@@ -2059,13 +2059,26 @@ enum NTLM_MESSAGE_TYPE {
 				{
 					unsigned char const *ptr;
 					unsigned char const *end;
-					unsigned char const *smb;
-					unsigned char const *smbdata;
+					unsigned char const *smb; // SMB2ヘッダ先頭
+					unsigned char const *smbdata; // SMB2ヘッダ直後のリクエスト本体先頭
 					smb2_peek_stream(stream, &ptr, &end, &smb, &smbdata);
 					if (smbdata + 0x30 > end) {
 						return 0;
 					}
 					unsigned char const *p = smbdata;
+
+					unsigned int chainoffset = LE4(smb + 0x14);
+					if (chainoffset) { // compounded requestの場合、次のリクエストを読む
+						unsigned short smb2_2nd_command = LE2(smb + chainoffset + 0x0c);
+						if (smb2_2nd_command == SMB2_OP_SETINFO) {
+							unsigned char smb2_2nd_infolevel =
+								*(smb + chainoffset + 64 + 3);
+							if (smb2_2nd_infolevel ==  SMB2_FILE_RENAME_INFO) {
+								log_printf(0, "[DEBUG SMB2] SMB2_OP_CREATE RENAME");
+							}
+						}
+					}
+
 					unsigned long accessmask = LE4(p + 0x18);
 					unsigned long createoptions = LE4(p + 0x28);
 					unsigned short offset = LE2(p + 0x2c);
@@ -2074,8 +2087,7 @@ enum NTLM_MESSAGE_TYPE {
 						return 0;
 					}
 					ustring path = smb_get_string(smb + offset, length / 2);
-					// if (path.size() > 0) {
-					if (true) {
+					if (path.size() > 0) {
 						session_data_t::smb2_session_t::tmp_t temp(request_id);
 						temp.infolevel = 0;
 						temp.delete_on_close = false;
@@ -2229,10 +2241,12 @@ enum NTLM_MESSAGE_TYPE {
 					unsigned char const *smb;
 					unsigned char const *smbdata;
 					smb2_peek_stream(stream, &ptr, &end, &smb, &smbdata);
-					std::uint32_t ntstatus = LE4(smb + 8);
+					unsigned long ntstatus = LE4(smb + 8);
 
 					if (temp) {
 						session->smb2_session.user_name_map[request_id.sid] = temp->sessionsetup.username;
+						// for DEBUG
+						/*
 						log_printf(data->time_us, "[SMB2] C=%s S=%s (session setup) D=%s U=%s H=%s NTSTATUS=%lx\n"
 							, sid->client.addr.tostring().c_str()
 							, sid->server.addr.tostring().c_str()
@@ -2241,6 +2255,7 @@ enum NTLM_MESSAGE_TYPE {
 							, utf8_ustring_to_string(temp->sessionsetup.hostname).c_str()
 							, ntstatus
 							);
+						*/
 					}
 
 					if ((ntstatus == 0xc000006d) && (temp) && (! temp->sessionsetup.username.empty())) {
@@ -2274,7 +2289,6 @@ enum NTLM_MESSAGE_TYPE {
 							tree.name = it->path;
 							session->smb2_session.tree_map[tree_id] = tree;
 #if 0
-// for DEBUG
 log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 	, sid->client.addr.tostring().c_str()
 	, sid->server.addr.tostring().c_str()
@@ -2431,7 +2445,7 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 					unsigned char const *smb;
 					unsigned char const *smbdata;
 					smb2_peek_stream(stream, &ptr, &end, &smb, &smbdata);
-					std::uint32_t ntstatus = LE4(smb + 8);
+					unsigned long ntstatus = LE4(smb + 8);
 					smb_file_state_t *filestate = session->smb2_session.find_file_state_map(temp->fid);
 					if (filestate) {
 						switch (temp->infolevel) {
@@ -2460,77 +2474,80 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 				}
 				break;
 			case SMB2_OP_NOTIFY:
-				unsigned char const *ptr;
-				unsigned char const *end;
-				unsigned char const *smb;
-				unsigned char const *smbdata;
-				smb2_peek_stream(stream, &ptr, &end, &smb, &smbdata);
-				if (smb + 0x30 > end || smbdata + 8 > end) {
-					return 0;
-				}
-
-				std::uint32_t ntstatus;
-				ntstatus = LE4(smb + 8);
-				if (NTSTATUS_IS_SUCCESS(ntstatus)) {
-				} else {
-					// other status codes
-					// STATUS_PENDING: 0x103
-					return 0;
-				}
-
-				std::uint16_t blob_offset; // SMB2ヘッダ先頭からのオフセット
-				std::uint16_t blob_length;
-
-				blob_offset = LE2(smbdata + 2);
-				blob_length = LE2(smbdata + 4);
-
-				// 古いファイル名のnotify info構造から、
-				// 新しいファイル名のnotify info構造へのオフセット
-				std::uint32_t notify_info_offset;
-				notify_info_offset = LE4(smb + blob_offset);
-
-				if (notify_info_offset == 0) {
-					// 新しい名前へのオフセットがないということは、
-					// 新しいファイル名がないということで、
-					// リネーム以外の何か
-					return 0;
-				}
-
-				const unsigned char* p = smb + blob_offset + 12;
-				std::uint32_t old_name_len = LE4(smb + blob_offset + 8);
-				ustring old_name = smb_get_string(p, p + old_name_len, 0x8000);
-
-				log_printf(0, "[SMB2] SMB2_OP_NOTIFY old name: %s",
-				utf8_ustring_to_string(old_name).c_str());
-
-				p = smb + blob_offset + notify_info_offset + 12;
-				std::uint32_t new_name_len = LE4(smb + blob_offset + 12 + 8);
-				ustring new_name = smb_get_string(p, p + new_name_len, 0x8000);
-
-				log_printf(0, "[SMB2] SMB2_OP_NOTIFY new name: %s",
-				utf8_ustring_to_string(new_name).c_str());
-
-				AutoLock lock(get_processor()->mutex());
+#if 0
 				{
-					file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);
-					ei->user_name = smb2_get_user_name(session, request_id.sid);
-					ei->text1 = old_name;
-					ei->text2 = new_name;
-					get_processor()->on_rename(ei);
-				}
+					unsigned char const *ptr;
+					unsigned char const *end;
+					unsigned char const *smb;
+					unsigned char const *smbdata;
+					smb2_peek_stream(stream, &ptr, &end, &smb, &smbdata);
+					if (smb + 0x30 > end || smbdata + 8 > end) {
+						return 0;
+					}
 
-				if (temp) {
+					unsigned long ntstatus;
+					ntstatus = LE4(smb + 8);
+					if (NTSTATUS_IS_SUCCESS(ntstatus)) {
+					} else {
+						// other status codes
+						// STATUS_PENDING: 0x103
+						return 0;
+					}
+
+					unsigned short blob_offset; // SMB2ヘッダ先頭からのオフセット
+					unsigned short blob_length;
+
+					blob_offset = LE2(smbdata + 2);
+					blob_length = LE2(smbdata + 4);
+
+					// 古いファイル名のnotify info構造から、
+					// 新しいファイル名のnotify info構造へのオフセット
+					unsigned long notify_info_offset;
+					notify_info_offset = LE4(smb + blob_offset);
+
+					if (notify_info_offset == 0) {
+						// 新しい名前へのオフセットがないということは、
+						// 新しいファイル名がないということで、
+						// リネーム以外の何か
+						return 0;
+					}
+
+					const unsigned char* p = smb + blob_offset + 12;
+					unsigned long old_name_len = LE4(smb + blob_offset + 8);
+					ustring old_name = smb_get_string(p, p + old_name_len, 0x8000);
+
+					// for DEBUG
+					log_printf(0, "[SMB2] SMB2_OP_NOTIFY old name: %s",
+					utf8_ustring_to_string(old_name).c_str());
+
+					p = smb + blob_offset + notify_info_offset + 12;
+					unsigned long new_name_len = LE4(smb + blob_offset + 12 + 8);
+					ustring new_name = smb_get_string(p, p + new_name_len, 0x8000);
+
+					// for DEBUG
+					log_printf(0, "[SMB2] SMB2_OP_NOTIFY new name: %s",
+					utf8_ustring_to_string(new_name).c_str());
+
+					AutoLock lock(get_processor()->mutex());
+					{
+						file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);
+						ei->user_name = smb2_get_user_name(session, request_id.sid);
+						ei->text1 = old_name;
+						ei->text2 = new_name;
+						get_processor()->on_rename(ei);
+					}
+
+
+					/*
+					smb_file_state_t *filestate = session->smb2_session.find_file_state_map(temp->fid);
+					if (filestate) {
+						unsigned long len = LE4(smbdata + 4);
+						filestate->written += len;
+					}
 					temp->clear();
+					*/
 				}
-
-				/*
-				smb_file_state_t *filestate = session->smb2_session.find_file_state_map(temp->fid);
-				if (filestate) {
-					unsigned long len = LE4(smbdata + 4);
-					filestate->written += len;
-				}
-				temp->clear();
-				*/
+#endif
 				break;
 			}
 		}
@@ -2539,3 +2556,5 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 	}
 
 } // namespace ContentsWatcher
+
+
