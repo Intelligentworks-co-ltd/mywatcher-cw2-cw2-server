@@ -1,4 +1,3 @@
-
 // PacketAnalyzerThreadのSMB解析処理
 
 #include "cw_analizer.h"
@@ -2067,6 +2066,15 @@ enum NTLM_MESSAGE_TYPE {
 					}
 					unsigned char const *p = smbdata;
 
+					unsigned long accessmask = LE4(p + 0x18);
+					unsigned long createoptions = LE4(p + 0x28);
+					unsigned short offset = LE2(p + 0x2c);
+					unsigned short length = LE2(p + 0x2e);
+					if (smb + offset + length > end) {
+						return 0;
+					}
+					ustring path = smb_get_string(smb + offset, length / 2);
+
 					unsigned int chainoffset = LE4(smb + 0x14);
 					if (chainoffset) { // compounded requestの場合、次のリクエストを読む
 						unsigned short smb2_2nd_command = LE2(smb + chainoffset + 0x0c);
@@ -2074,28 +2082,19 @@ enum NTLM_MESSAGE_TYPE {
 							unsigned char smb2_2nd_infolevel =
 								*(smb + chainoffset + 64 + 3);
 							if (smb2_2nd_infolevel ==  SMB2_FILE_RENAME_INFO) {
-								log_printf(0, "[DEBUG SMB2] SMB2_OP_CREATE RENAME");
-								/*
+								bool ipc = false;
+								path = session->smb2_session.make_path(tree_id, path, &ipc);
 								AutoLock lock(get_processor()->mutex());
 								{
 									file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);
 									ei->user_name = smb2_get_user_name(session, request_id.sid);
-									ei->text1 = old_name;
-									ei->text2 = new_name;
+									ei->text1 = path;
+									ei->text2 = path;
 									get_processor()->on_rename(ei);
 								}
-								*/
 							}
 						}
 					} else {
-						unsigned long accessmask = LE4(p + 0x18);
-						unsigned long createoptions = LE4(p + 0x28);
-						unsigned short offset = LE2(p + 0x2c);
-						unsigned short length = LE2(p + 0x2e);
-						if (smb + offset + length > end) {
-							return 0;
-						}
-						ustring path = smb_get_string(smb + offset, length / 2);
 						if (path.size() > 0) {
 							session_data_t::smb2_session_t::tmp_t temp(request_id);
 							temp.infolevel = 0;
@@ -2566,5 +2565,3 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 	}
 
 } // namespace ContentsWatcher
-
-
