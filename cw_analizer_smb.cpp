@@ -2075,40 +2075,50 @@ enum NTLM_MESSAGE_TYPE {
 								*(smb + chainoffset + 64 + 3);
 							if (smb2_2nd_infolevel ==  SMB2_FILE_RENAME_INFO) {
 								log_printf(0, "[DEBUG SMB2] SMB2_OP_CREATE RENAME");
+								/*
+								AutoLock lock(get_processor()->mutex());
+								{
+									file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);
+									ei->user_name = smb2_get_user_name(session, request_id.sid);
+									ei->text1 = old_name;
+									ei->text2 = new_name;
+									get_processor()->on_rename(ei);
+								}
+								*/
 							}
 						}
-					}
-
-					unsigned long accessmask = LE4(p + 0x18);
-					unsigned long createoptions = LE4(p + 0x28);
-					unsigned short offset = LE2(p + 0x2c);
-					unsigned short length = LE2(p + 0x2e);
-					if (smb + offset + length > end) {
-						return 0;
-					}
-					ustring path = smb_get_string(smb + offset, length / 2);
-					if (path.size() > 0) {
-						session_data_t::smb2_session_t::tmp_t temp(request_id);
-						temp.infolevel = 0;
-						temp.delete_on_close = false;
-						temp.am_delete = false;
-						temp.path = path;
-						if (createoptions & 1) { // directory
-							temp.isdirectory = true;
-						} else {
-							temp.isdirectory = false;
+					} else {
+						unsigned long accessmask = LE4(p + 0x18);
+						unsigned long createoptions = LE4(p + 0x28);
+						unsigned short offset = LE2(p + 0x2c);
+						unsigned short length = LE2(p + 0x2e);
+						if (smb + offset + length > end) {
+							return 0;
 						}
-						if (createoptions & 0x1000) { // delete_on_close
-							temp.delete_on_close = true;
-						} else {
+						ustring path = smb_get_string(smb + offset, length / 2);
+						if (path.size() > 0) {
+							session_data_t::smb2_session_t::tmp_t temp(request_id);
+							temp.infolevel = 0;
 							temp.delete_on_close = false;
-						}
-						if (accessmask & 0x10000) { // delete on Access Mask
-							temp.am_delete = true;
-						} else {
 							temp.am_delete = false;
+							temp.path = path;
+							if (createoptions & 1) { // directory
+								temp.isdirectory = true;
+							} else {
+								temp.isdirectory = false;
+							}
+							if (createoptions & 0x1000) { // delete_on_close
+								temp.delete_on_close = true;
+							} else {
+								temp.delete_on_close = false;
+							}
+							if (accessmask & 0x10000) { // delete on Access Mask
+								temp.am_delete = true;
+							} else {
+								temp.am_delete = false;
+							}
+							session->smb2_session.insert(temp);
 						}
-						session->smb2_session.insert(temp);
 					}
 				}
 				break;
