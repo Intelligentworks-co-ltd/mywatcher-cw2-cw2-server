@@ -2084,12 +2084,15 @@ enum NTLM_MESSAGE_TYPE {
 							if (smb2_2nd_infolevel ==  SMB2_FILE_RENAME_INFO) {
 								bool ipc = false;
 								path = session->smb2_session.make_path(tree_id, path, &ipc);
+								unsigned int new_name_len = LE4(smb + chainoffset + 64 + 48);
+								ustring new_name = smb_get_string(smb + chainoffset + 64 +48 + 4 , length / 2);
+								new_name = session->smb2_session.make_path(tree_id, new_name, &ipc);
 								AutoLock lock(get_processor()->mutex());
 								{
 									file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);
 									ei->user_name = smb2_get_user_name(session, request_id.sid);
 									ei->text1 = path;
-									ei->text2 = path;
+									ei->text2 = new_name;
 									get_processor()->on_rename(ei);
 								}
 							}
