@@ -2095,32 +2095,32 @@ enum NTLM_MESSAGE_TYPE {
 									ei->text2 = new_name;
 									get_processor()->on_rename(ei);
 								}
+								break;
 							}
 						}
-					} else {
-						if (path.size() > 0) {
-							session_data_t::smb2_session_t::tmp_t temp(request_id);
-							temp.infolevel = 0;
+					}
+					if (path.size() > 0) {
+						session_data_t::smb2_session_t::tmp_t temp(request_id);
+						temp.infolevel = 0;
+						temp.delete_on_close = false;
+						temp.am_delete = false;
+						temp.path = path;
+						if (createoptions & 1) { // directory
+							temp.isdirectory = true;
+						} else {
+							temp.isdirectory = false;
+						}
+						if (createoptions & 0x1000) { // delete_on_close
+							temp.delete_on_close = true;
+						} else {
 							temp.delete_on_close = false;
-							temp.am_delete = false;
-							temp.path = path;
-							if (createoptions & 1) { // directory
-								temp.isdirectory = true;
-							} else {
-								temp.isdirectory = false;
-							}
-							if (createoptions & 0x1000) { // delete_on_close
-								temp.delete_on_close = true;
-							} else {
-								temp.delete_on_close = false;
-							}
-							if (accessmask & 0x10000) { // delete on Access Mask
-								temp.am_delete = true;
-							} else {
-								temp.am_delete = false;
-							}
-							session->smb2_session.insert(temp);
 						}
+						if (accessmask & 0x10000) { // delete on Access Mask
+							temp.am_delete = true;
+						} else {
+							temp.am_delete = false;
+						}
+						session->smb2_session.insert(temp);
 					}
 				}
 				break;
