@@ -1,6 +1,5 @@
-
-#define CW_VERSION "2.3.1"
-#define CW_COPYRIGHT_YEAR "2009-2018"
+#define CW_VERSION "2.3.2"
+#define CW_COPYRIGHT_YEAR "2009-2021"
 
 // ログ出力キューの上限
 #define CW_LOG_QUEUE_LIMIT 100000
@@ -13,7 +12,6 @@
 
 // CSVファイル内の行数
 #define CSV_FILE_LINES 10000
-
 
 #ifdef WIN32
 #define CW_INI_FILE "C:/usr/local/cwatcher/conf/cwatcher.ini"
@@ -29,14 +27,11 @@
 #define CW_PACKET_DUMP_FILE "/var/log/cwatcher/capture.pcap"
 #define CW_DIAGNOSTIC_FILE "/var/log/cwatcher/diagnostic.txt"
 
-
 //// log file setting
-
 #define LOG_PATH "/var/log/cwatcher"
 #define LOG_NAME "cw.log"
 
 //// service/daemon setting
-
 #ifdef WIN32
 	#pragma warning(disable:4996)
 	#define WINDOWS_SERVICE_NAME L"Contents Watcher 2 Service"
@@ -47,9 +42,6 @@
 #endif
 
 //// database setting
-
 #define DB_SUPPORT_MYSQL
 //#define DB_SUPPORT_ODBC
 //#define DB_SUPPORT_SQLITE
-
-////
