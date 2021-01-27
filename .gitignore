@@ -1,6 +1,3 @@
-db/
-sqlite/
-common/
 *.o
 *.swp
 *.tmp
