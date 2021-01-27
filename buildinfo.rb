@@ -10,6 +10,7 @@ else
 end
 
 # str = `svn info`
+=begin
 str = `LANG=C; svn info`
 
 str.each_line {|line|
@@ -17,8 +18,8 @@ str.each_line {|line|
 		rev = $1.to_i
 	end
 }
+=end
 
 puts "char const *build_timestamp = \"#{Time.new.to_s}\";"
 puts "char const *build_system = \"#{sys}\";"
 puts "int build_revision = #{rev};"
-

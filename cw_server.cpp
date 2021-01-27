@@ -510,6 +510,7 @@ namespace ContentsWatcher {
 
 	void MainServer::everyminute(time_t now)
 	{
+#if 0 // TODO cpu負荷を正しく取れるようになったら外す
 		unsigned long bytes = networkbytes;
 		networkbytes = 0;
 		double cpu;
@@ -540,6 +541,7 @@ namespace ContentsWatcher {
 			diagnostic_packet_capture_queue_size,
 			diagnostic_event_output_queue_size,
 			diagnostic_ip_session_map_size);
+#endif
 
 		_analyzer_thread->_cleanup = true;
 		_analyzer_thread->_event.signal();
@@ -819,11 +821,13 @@ namespace ContentsWatcher {
 					_lookuper.start();
 				}
 
-				cpuload.open();
+				// TODO cpu負荷を正しく取れるようになったら外す
+				//cpuload.open();
 
 				loop();
 
-				cpuload.close();
+				// TODO cpu負荷を正しく取れるようになったら外す
+				//cpuload.close();
 
 				if (!option->no_database) {
 					_processor.stop();

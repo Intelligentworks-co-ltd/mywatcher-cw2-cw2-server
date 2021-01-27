@@ -5,3 +5,6 @@
 *.utf8
 *.sql
 cw2_server
+a.out
+core
+*.tgz
