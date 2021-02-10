@@ -2067,6 +2067,7 @@ enum NTLM_MESSAGE_TYPE {
 					unsigned char const *p = smbdata;
 
 					unsigned long accessmask = LE4(p + 0x18);
+					unsigned long sharemask = LE4(p + 0x26);
 					unsigned long createoptions = LE4(p + 0x28);
 					unsigned short offset = LE2(p + 0x2c);
 					unsigned short length = LE2(p + 0x2e);
@@ -2103,7 +2104,9 @@ enum NTLM_MESSAGE_TYPE {
 						session_data_t::smb2_session_t::tmp_t temp(request_id);
 						temp.infolevel = 0;
 						temp.delete_on_close = false;
+						temp.am_write = false;
 						temp.am_delete = false;
+						temp.sharemask = sharemask;
 						temp.path = path;
 						if (createoptions & 1) { // directory
 							temp.isdirectory = true;
@@ -2114,6 +2117,11 @@ enum NTLM_MESSAGE_TYPE {
 							temp.delete_on_close = true;
 						} else {
 							temp.delete_on_close = false;
+						}
+						if (accessmask & 0x2) { // write on Access Mask
+							temp.am_write = true;
+						} else {
+							temp.am_write = false;
 						}
 						if (accessmask & 0x10000) { // delete on Access Mask
 							temp.am_delete = true;
@@ -2329,6 +2337,7 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 					unsigned long action = LE4(smbdata + 4);
 					bool isdirectory = temp->isdirectory;
 					bool delete_on_close = temp->delete_on_close;
+					bool am_write = temp->am_write;
 					bool am_delete = temp->am_delete;
 
 					bool ipc = false;
@@ -2345,7 +2354,7 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 					fs->flags.opened = true;
 
 					ustring username = smb2_get_user_name(session, request_id.sid);
-					if (am_delete && !delete_on_close) {
+					if (am_delete && !delete_on_close && !am_write && (temp->sharemask == 0)) {
 						smb_create_action(2, sid, data, username, 4, isdirectory, path);
 					} else {
 						smb_create_action(2, sid, data, username, action, isdirectory, path);
@@ -2396,6 +2405,7 @@ log_printf(0, "[SMB] C=%s S=%s tree_connect_andx \"%s\" tid=%u"
 											file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);
 											ei->user_name = smb2_get_user_name(session, request_id.sid);
 											ei->text1 = path;
+
 											get_processor()->on_delete_dir(ei);
 										} else {
 											file_access_event_item_t ei(sid, data, file_access_event_item_t::P_SMB2, _packet_number);

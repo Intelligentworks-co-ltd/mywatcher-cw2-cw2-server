@@ -469,11 +469,15 @@ dispatch:;
 				session_data_t *s = it->second.get_session_data();
 				stream->buffer->clear();
 				stream->sequence_is_valid = false;
+				// for DEBUG
+				// TODO: オプションで出力するかどうかできるようにすること
+				/*
 				log_printf(packet->microsecond(), "[TCP] C=%s S=%s sequence number incorrect (#%u)"
 					, it->first.client.addr.tostring().c_str()
 					, it->first.server.addr.tostring().c_str()
 					, _packet_number
 					);
+				*/
 			} else {
 				stream->sequence += datalen;
 			}

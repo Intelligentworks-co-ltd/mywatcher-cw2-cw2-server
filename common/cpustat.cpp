@@ -1,4 +1,3 @@
-
 #include "cpustat.h"
 
 #ifdef WIN32
@@ -61,7 +60,6 @@ void ProcessorLoad_::close()
 #elif defined(Linux)
 
 #include <stdlib.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
@@ -199,5 +197,3 @@ void ProcessorLoad_::close()
 }
 
 #endif
-
-

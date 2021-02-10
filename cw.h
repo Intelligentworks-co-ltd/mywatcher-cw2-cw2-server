@@ -432,7 +432,9 @@ namespace ContentsWatcher {
 				smb2_fid_t fid;
 				bool isdirectory;
 				bool delete_on_close;
+				bool am_write; // Access Mask
 				bool am_delete; // Access Mask
+				unsigned long sharemask; // Share Mask
 				struct {
 					ustring domain;
 					ustring username;
