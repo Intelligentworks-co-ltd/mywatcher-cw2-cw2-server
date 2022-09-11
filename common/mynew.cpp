@@ -1,9 +1,9 @@
 
 
 // どれか一つだけ 1 にする
-#define USE_MALLOC 0
+#define USE_MALLOC 1
 #define USE_DLMALLOC 0
-#define USE_JEMALLOC 1
+#define USE_JEMALLOC 0
 #define USE_DEBUG_MALLOC 0
 
 
