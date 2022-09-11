@@ -757,7 +757,7 @@ namespace ContentsWatcher {
 
 		// if UNICODE then "p" must to adjust 16bit boundary (even-address)
 		p += passwordlength;
-		if ((flags2 & 0x8000) && ((int)p & 1)) {
+		if ((flags2 & 0x8000) && ((intptr_t)p & 1)) {
 			p++;
 		}
 		ustring path = smb_get_string(p, end, flags2);
@@ -1008,7 +1008,7 @@ if (_packet_number == 9) {
 						ustring nativeos;
 						ustring nativelm;
 						if (flags2 & 0x8000) { // unicode string
-							if ((int)p & 1) { // 奇数なら1進める
+							if ((intptr_t)p & 1) { // 奇数なら1進める
 								p++;
 							}
 							readstring_u(p, end, &p, &user_name);
