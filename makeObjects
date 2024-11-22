@@ -1,0 +1,69 @@
+!/usr/bin/ruby
+# vim: autoindent noexpandtab sw=0 sts=0 :
+
+def parse_file(path, arr)
+	directory = ''
+	filename = ''
+	if (path =~ /^(.+\/)([^\/]+)$/)
+		directory = $1
+		filename = $2
+		$stderr.printf("I %s%s\n", directory, filename)
+	end
+	File.open(path) {|f|
+		f.each {|l|
+			if (l =~ /^\s*#\s*include\s*"(.+)"/)
+				fn = $1
+				if !File.exist?(directory + fn)
+					next
+				end
+				arr.push(directory + fn)
+				if (fn =~ /^(.+\.h)$/)
+					fn = directory + $1
+					parse_file(fn, arr);
+				end
+			end
+		}
+	}
+end
+
+def process_directory(dir, a_obj)
+	if dir == nil
+		dir = '.'
+	end
+	dir = dir + '/'
+	Dir.foreach(dir) {|filename|
+		path = dir + filename
+		stat = File.stat(path);
+		if stat.directory?
+			if filename[0] != ?.
+				$stderr.printf("D %s\n", path)
+				process_directory(path, a_obj)
+			end
+		else
+			$stderr.printf("F %s\n", path)
+			if (path =~ /^(.+)\.cpp$/ || path =~ /^(.+)\.c$/)
+				basename = $1
+				a_inc = Array.new
+				parse_file(path, a_inc)
+				objname = basename + ".o"
+				printf("%s: %s", objname, path)
+				a_inc.uniq!
+				a_inc.each {|t|
+					printf(" %s", t)
+				}
+				puts
+				a_obj.push(objname);
+			end
+		end
+	}
+end
+
+a_obj = Array.new
+process_directory(nil, a_obj)
+
+printf("OBJS =")
+a_obj.each {|t|
+	printf(" %s", t)
+}
+puts
+
