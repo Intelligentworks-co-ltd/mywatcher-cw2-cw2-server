@@ -1,25 +1,14 @@
-
-
 // どれか一つだけ 1 にする
 #define USE_MALLOC 1
 #define USE_DLMALLOC 0
+// 正常に動作しなくなった古いjemalloc(2008年導入)のソースを削除
+// 将来必要になった場合は新しいバージョンを導入する。
 #define USE_JEMALLOC 0
 #define USE_DEBUG_MALLOC 0
 
-
-
-
 unsigned long long diagnostic_allocated_memory = 0;
 
-
-
-
-
-
-
-
 #ifdef WIN32
-
 #include <windows.h>
 class CriticalSection {
 public:
@@ -168,10 +157,11 @@ void operator delete[](void *p)
 
 
 #endif
-#if USE_JEMALLOC // jemallocを使用する
-
-
-
+#if USE_JEMALLOC
+// jemallocを使用する実装
+// 注: 現在はjemallocのソースコードは削除済み
+// このコードブロックは将来jemallocを再導入する際の参考実装として残してある
+// 再導入時は common/jemalloc/ に必要なファイルを配置し、上記の USE_JEMALLOC を 1 に設定する
 
 #include <new>
 

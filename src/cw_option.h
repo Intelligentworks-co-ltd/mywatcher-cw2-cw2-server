@@ -4,6 +4,7 @@
 
 #include <string>
 #include <set>
+#include <ctime>
 #include "common/netaddr.h"
 
 namespace ContentsWatcher {
