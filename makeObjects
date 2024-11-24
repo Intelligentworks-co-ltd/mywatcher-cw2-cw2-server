@@ -1,4 +1,4 @@
-!/usr/bin/ruby
+#!/usr/bin/ruby
 # vim: autoindent noexpandtab sw=0 sts=0 :
 
 def parse_file(path, arr)
