@@ -1,0 +1,13 @@
+[Unit]
+Description=cw2 server
+After=network.target mysql.service
+Wants=network.target mysql.service
+
+[Service]
+Type=forking
+ExecStart=/usr/local/cwatcher/bin/cw2_server -nsd -ncs -idp start
+ExecStop=/usr/local/cwatcher/bin/cw2_server stop
+PIDFile=/var/run/cw2_server.pid
+
+[Install]
+WantedBy=multi-user.target
